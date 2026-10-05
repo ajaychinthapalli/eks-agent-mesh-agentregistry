@@ -1,0 +1,52 @@
+bash-5.3$ eksctl create nodegroup -f agents-nodegroup.yaml
+2026-10-04 14:33:56 [!]  no eksctl-managed CloudFormation stacks found for "ac-ws-dev-use2", will attempt to create nodegroup(s) on non eksctl-managed cluster
+2026-10-04 14:33:57 [ℹ]  nodegroup "agents" will use "" [AmazonLinux2023/1.36]
+2026-10-04 14:33:57 [ℹ]  1 nodegroup (agents) was included (based on the include/exclude rules)
+2026-10-04 14:33:57 [ℹ]  will create a CloudFormation stack for each of 1 managed nodegroups in cluster "ac-ws-dev-use2"
+2026-10-04 14:33:57 [ℹ]  1 task: { 1 task: { 1 task: { create managed nodegroup "agents" } } }
+2026-10-04 14:33:57 [ℹ]  building managed nodegroup stack "eksctl-ac-ws-dev-use2-nodegroup-agents"
+2026-10-04 14:33:58 [ℹ]  deploying stack "eksctl-ac-ws-dev-use2-nodegroup-agents"
+2026-10-04 14:33:58 [ℹ]  waiting for CloudFormation stack "eksctl-ac-ws-dev-use2-nodegroup-agents"
+2026-10-04 14:34:28 [ℹ]  waiting for CloudFormation stack "eksctl-ac-ws-dev-use2-nodegroup-agents"
+2026-10-04 14:35:14 [ℹ]  waiting for CloudFormation stack "eksctl-ac-ws-dev-use2-nodegroup-agents"
+2026-10-04 14:36:30 [ℹ]  waiting for CloudFormation stack "eksctl-ac-ws-dev-use2-nodegroup-agents"
+2026-10-04 14:36:30 [ℹ]  no tasks
+2026-10-04 14:36:30 [✔]  created 0 nodegroup(s) in cluster "ac-ws-dev-use2"
+2026-10-04 14:36:30 [ℹ]  nodegroup "agents" has 2 node(s)
+2026-10-04 14:36:30 [ℹ]  node "ip-192-168-128-165.us-east-2.compute.internal" is ready
+2026-10-04 14:36:30 [ℹ]  node "ip-192-168-251-66.us-east-2.compute.internal" is ready
+2026-10-04 14:36:30 [ℹ]  waiting for at least 2 node(s) to become ready in "agents"
+2026-10-04 14:36:31 [ℹ]  nodegroup "agents" has 2 node(s)
+2026-10-04 14:36:31 [ℹ]  node "ip-192-168-128-165.us-east-2.compute.internal" is ready
+2026-10-04 14:36:31 [ℹ]  node "ip-192-168-251-66.us-east-2.compute.internal" is ready
+2026-10-04 14:36:31 [✔]  created 1 managed nodegroup(s) in cluster "ac-ws-dev-use2"
+2026-10-04 14:36:31 [ℹ]  checking security group configuration for all nodegroups
+2026-10-04 14:36:31 [ℹ]  all nodegroups have up-to-date cloudformation templates
+bash-5.3$ 
+bash-5.3$ 
+bash-5.3$ kubectl get nodes
+NAME                                            STATUS   ROLES    AGE   VERSION
+ip-192-168-103-63.us-east-2.compute.internal    Ready    <none>   14d   v1.36.4-eks-a887778
+ip-192-168-128-165.us-east-2.compute.internal   Ready    <none>   83s   v1.36.4-eks-3b4a6ca
+ip-192-168-144-126.us-east-2.compute.internal   Ready    <none>   14d   v1.36.4-eks-a887778
+ip-192-168-233-47.us-east-2.compute.internal    Ready    <none>   14d   v1.36.4-eks-a887778
+ip-192-168-251-66.us-east-2.compute.internal    Ready    <none>   81s   v1.36.4-eks-3b4a6ca
+bash-5.3$ 
+bash-5.3$ 
+bash-5.3$ kubectl get nodes -L eks.amazonaws.com/nodegroup,node.kubernetes.io/instance-type
+NAME                                            STATUS   ROLES    AGE     VERSION               NODEGROUP   INSTANCE-TYPE
+ip-192-168-103-63.us-east-2.compute.internal    Ready    <none>   14d     v1.36.4-eks-a887778               t3.small
+ip-192-168-128-165.us-east-2.compute.internal   Ready    <none>   2m16s   v1.36.4-eks-3b4a6ca   agents      t3.large
+ip-192-168-144-126.us-east-2.compute.internal   Ready    <none>   14d     v1.36.4-eks-a887778               t3.small
+ip-192-168-233-47.us-east-2.compute.internal    Ready    <none>   14d     v1.36.4-eks-a887778               t3.small
+ip-192-168-251-66.us-east-2.compute.internal    Ready    <none>   2m14s   v1.36.4-eks-3b4a6ca   agents      t3.large
+bash-5.3$ 
+bash-5.3$ 
+bash-5.3$ export NODE_SG=sg-xxxxxxxxxxxxxxxxx
+aws ec2 authorize-security-group-ingress --group-id $NODE_SG    --protocol -1 --source-group $CLUSTER_SG
+aws ec2 authorize-security-group-ingress --group-id $CLUSTER_SG --protocol -1 --source-group $NODE_SG
+
+aws: [ERROR]: An error occurred (InvalidPermission.Duplicate) when calling the AuthorizeSecurityGroupIngress operation: the specified rule "peer: sg-xxxxxxxxxxxxxxxxx, ALL, ALLOW" already exists
+
+aws: [ERROR]: An error occurred (InvalidPermission.Duplicate) when calling the AuthorizeSecurityGroupIngress operation: the specified rule "peer: sg-xxxxxxxxxxxxxxxxx, ALL, ALLOW" already exists
+bash-5.3$ 

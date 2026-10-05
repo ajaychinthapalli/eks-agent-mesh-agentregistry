@@ -1,0 +1,24 @@
+# Managed node group for the agent platform on an existing cluster that eksctl did not create.
+# eksctl needs the VPC spelled out. Fill in the values, then: eksctl create nodegroup -f infra/agents-nodegroup.yaml
+apiVersion: eksctl.io/v1alpha5
+kind: ClusterConfig
+metadata:
+  name: ${CLUSTER}
+  region: ${AWS_REGION}
+  version: "1.36"
+vpc:
+  id: ${VPC_ID}
+  securityGroup: <control-plane-security-group-id>   # aws eks describe-cluster ... --query cluster.resourcesVpcConfig.securityGroupIds
+  subnets:
+    public:            # or private: if your nodes run in private subnets
+      <az-a>: { id: <subnet-id-a> }
+      <az-b>: { id: <subnet-id-b> }
+      <az-c>: { id: <subnet-id-c> }
+managedNodeGroups:
+  - name: agents
+    instanceType: t3.large
+    minSize: 2
+    desiredCapacity: 2
+    maxSize: 4
+    labels:
+      workload: agents

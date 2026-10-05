@@ -1,0 +1,145 @@
+bash-5.3$ # Your cluster's OIDC issuer (EKS publishes the ServiceAccount signing keys here)
+export OIDC_ISSUER=$(aws eks describe-cluster --name $CLUSTER --region $AWS_REGION \
+  --query cluster.identity.oidc.issuer --output text)
+export OIDC_ID=${OIDC_ISSUER##*/}
+echo $OIDC_ISSUER     # expect …/id/EXAMPLE0000000000000000000000000
+
+# The On-call pod's ServiceAccount, and confirm its token is mounted
+P=$(kubectl -n kagent get pods -o name | grep -i platformoncall | head -1)
+export ONCALL_SA=$(kubectl -n kagent get $P -o jsonpath='{.spec.serviceAccountName}')
+echo "oncall SA: $ONCALL_SA"
+kubectl -n kagent exec $P -- ls /var/run/secrets/kubernetes.io/serviceaccount/token
+
+# A caller identity for alarms and tests
+kubectl create namespace ops-callers
+kubectl -n ops-callers create serviceaccount incident-intake
+https://oidc.eks.us-east-2.amazonaws.com/id/EXAMPLE0000000000000000000000000
+oncall SA: platformoncall-latest-platformoncall
+/var/run/secrets/kubernetes.io/serviceaccount/token
+namespace/ops-callers created
+serviceaccount/incident-intake created
+bash-5.3$ 
+bash-5.3$ cat <<EOF | kubectl apply -f -
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayBackend
+metadata:
+  name: eks-oidc-jwks
+  namespace: agentgateway-system
+spec:
+  static:
+    host: oidc.eks.$AWS_REGION.amazonaws.com
+    port: 443
+  policies:
+    tls:
+      sni: oidc.eks.$AWS_REGION.amazonaws.com
+---
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayPolicy
+metadata:
+  name: a2a-jwt
+  namespace: agentgateway-system
+spec:
+  targetRefs:
+    - { group: gateway.networking.k8s.io, kind: HTTPRoute, name: a2a-eks-troubleshooter }
+    - { group: gateway.networking.k8s.io, kind: HTTPRoute, name: a2a-platform-oncall }
+  traffic:
+    jwtAuthentication:
+      mode: Strict
+      providers:
+        - issuer: "$OIDC_ISSUER"
+          jwks:
+            remote:
+              jwksPath: "/id/$OIDC_ID/keys"
+              cacheDuration: "5m"
+              backendRef:
+                group: agentgateway.dev
+                kind: AgentgatewayBackend
+                name: eks-oidc-jwks
+                port: 443
+---
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayPolicy
+metadata:
+  name: authz-eks-troubleshooter
+  namespace: agentgateway-system
+spec:
+  targetRefs:
+    - { group: gateway.networking.k8s.io, kind: HTTPRoute, name: a2a-eks-troubleshooter }
+  traffic:
+    authorization:
+      action: Allow
+      policy:
+        matchExpressions:
+          - "jwt.sub == 'system:serviceaccount:kagent:$ONCALL_SA'"
+---
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayPolicy
+metadata:
+  name: authz-platform-oncall
+  namespace: agentgateway-system
+spec:
+  targetRefs:
+    - { group: gateway.networking.k8s.io, kind: HTTPRoute, name: a2a-platform-oncall }
+  traffic:
+    authorization:
+      action: Allow
+      policy:
+        matchExpressions:
+          - "jwt.sub == 'system:serviceaccount:ops-callers:incident-intake'"
+EOF
+
+kubectl -n agentgateway-system get agentgatewaypolicy \
+  -o custom-columns=NAME:.metadata.name,STATUS:.status.ancestors[0].conditions[0].reason
+agentgatewaybackend.agentgateway.dev/eks-oidc-jwks created
+agentgatewaypolicy.agentgateway.dev/a2a-jwt created
+agentgatewaypolicy.agentgateway.dev/authz-eks-troubleshooter created
+agentgatewaypolicy.agentgateway.dev/authz-platform-oncall created
+NAME                       STATUS
+a2a-jwt                    Valid
+authz-eks-troubleshooter   Valid
+authz-platform-oncall      Valid
+bash-5.3$ 
+bash-5.3$ 
+bash-5.3$ # 1. No token -> 401
+curl -s -o /dev/null -w 'no token: %{http_code}\n' localhost:8080/a2a/ops/ekstroubleshooter/ \
+  -H content-type:application/json -d '{}'
+
+# 2. Valid token, wrong caller (incident-intake calling the Troubleshooter directly) -> 403
+TOKEN=$(kubectl -n ops-callers create token incident-intake --duration 1h)
+curl -s -o /dev/null -w 'wrong caller: %{http_code}\n' localhost:8080/a2a/ops/ekstroubleshooter/ \
+  -H "Authorization: Bearer $TOKEN" -H content-type:application/json -d '{}'
+
+# 3. No token to the On-call route -> 401
+curl -s -o /dev/null -w 'oncall no token: %{http_code}\n' localhost:8080/a2a/ops/platformoncall/ \
+  -H content-type:application/json -d '{}'
+
+# 4. Authorized end-to-end: incident-intake -> On-call -> (its own SA token) -> Troubleshooter
+curl -s --max-time 300 localhost:8080/a2a/ops/platformoncall/ \
+  -H "Authorization: Bearer $TOKEN" -H content-type:application/json -d '{
+  "jsonrpc": "2.0", "id": "inc-4", "method": "message/send",
+  "params": {"message": {"role": "user", "kind": "message", "messageId": "inc-4",
+    "parts": [{"kind": "text", "text": "Alarm: checkout pods in namespace shop are in CrashLoopBackOff. Root cause?"}]}}
+}' | jq -r '.result.artifacts[]?.parts[]?.text // .result.status.message.parts[]?.text // .' | head -15
+Handling connection for 8080
+no token: 401
+Handling connection for 8080
+wrong caller: 403
+Handling connection for 8080
+oncall no token: 401
+Handling connection for 8080
+## Investigation Complete
+
+**Agent Used:** ekstroubleshooter (EKS Troubleshooting Specialist)
+
+### Root Cause
+The checkout pods are being **OOMKilled** because the container attempts to allocate 250MB of memory but has only a 100Mi memory limit configured.
+
+### Evidence
+1. **Pod Status**: Last State shows `Terminated` with `Reason: OOMKilled` and `Exit Code: 137`
+2. **Memory Mismatch**: 
+   - Container requests: `--vm-bytes 250M` (250 MB)
+   - Memory limit: `100Mi` (104.8 MB)
+   - Memory request: `50Mi` (52.4 MB)
+3. **Crash Pattern**: Both pods show CrashLoopBackOff with 14+ restarts
+4. **Logs**: The stress tool starts successfully but gets killed immediately when attempting the 250M allocation
+bash-5.3$ 

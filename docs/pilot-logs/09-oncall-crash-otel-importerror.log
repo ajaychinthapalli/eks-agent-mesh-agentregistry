@@ -1,0 +1,73 @@
+platformoncall-latest-platformoncall-8479868b6c-xhm2n   1/1     Running   0               15m     192.168.134.171   ip-192-168-128-165.us-east-2.compute.internal   <none>           <none>
+platformoncall-latest-platformoncall-85c57cc5cd-l7zlw   0/1     Error     5 (2m21s ago)   5m57s   192.168.244.56    ip-192-168-251-66.us-east-2.compute.internal    <none>           <none>
+== pod/platformoncall-latest-platformoncall-8479868b6c-xhm2n ==
+image=111122223333.dkr.ecr.us-east-2.amazonaws.com/agents/platformoncall:0.1.0 phase=Running ready=true restarts=0
+== pod/platformoncall-latest-platformoncall-85c57cc5cd-l7zlw ==
+image=111122223333.dkr.ecr.us-east-2.amazonaws.com/agents/platformoncall:0.1.1 phase=Running ready=false restarts=5
+new pod: platformoncall-latest-platformoncall-85c57cc5cd-l7zlw
+Events:
+  Type     Reason     Age                    From               Message
+  ----     ------     ----                   ----               -------
+  Normal   Scheduled  6m1s                   default-scheduler  Successfully assigned kagent/platformoncall-latest-platformoncall-85c57cc5cd-l7zlw to ip-192-168-251-66.us-east-2.compute.internal
+  Normal   Pulled     6m                     kubelet            spec.initContainers{opentelemetry-auto-instrumentation-java}: Container image "602401143452.dkr.ecr.us-east-2.amazonaws.com/eks/observability/adot-autoinstrumentation-java:v2.30.0" already present on machine and can be accessed by the pod
+  Normal   Created    6m                     kubelet            spec.initContainers{opentelemetry-auto-instrumentation-java}: Container created
+  Normal   Started    5m59s                  kubelet            spec.initContainers{opentelemetry-auto-instrumentation-java}: Container started
+  Normal   Pulled     5m59s                  kubelet            spec.initContainers{opentelemetry-auto-instrumentation-nodejs}: Container image "602401143452.dkr.ecr.us-east-2.amazonaws.com/eks/observability/adot-autoinstrumentation-node:v0.12.0" already present on machine and can be accessed by the pod
+  Normal   Created    5m59s                  kubelet            spec.initContainers{opentelemetry-auto-instrumentation-nodejs}: Container created
+  Normal   Started    5m59s                  kubelet            spec.initContainers{opentelemetry-auto-instrumentation-nodejs}: Container started
+  Normal   Pulled     5m54s                  kubelet            spec.initContainers{opentelemetry-auto-instrumentation-python}: Container image "602401143452.dkr.ecr.us-east-2.amazonaws.com/eks/observability/adot-autoinstrumentation-python:v0.19.0" already present on machine and can be accessed by the pod
+  Normal   Created    5m54s                  kubelet            spec.initContainers{opentelemetry-auto-instrumentation-python}: Container created
+  Normal   Started    5m54s                  kubelet            spec.initContainers{opentelemetry-auto-instrumentation-python}: Container started
+  Normal   Pulled     5m52s                  kubelet            spec.initContainers{opentelemetry-auto-instrumentation-dotnet}: Container image "602401143452.dkr.ecr.us-east-2.amazonaws.com/eks/observability/adot-autoinstrumentation-dotnet:v1.15.0" already present on machine and can be accessed by the pod
+  Normal   Created    5m52s                  kubelet            spec.initContainers{opentelemetry-auto-instrumentation-dotnet}: Container created
+  Normal   Started    5m52s                  kubelet            spec.initContainers{opentelemetry-auto-instrumentation-dotnet}: Container started
+  Normal   Pulling    5m51s                  kubelet            spec.containers{kagent}: Pulling image "111122223333.dkr.ecr.us-east-2.amazonaws.com/agents/platformoncall:0.1.1"
+  Normal   Pulled     5m14s                  kubelet            spec.containers{kagent}: Successfully pulled image "111122223333.dkr.ecr.us-east-2.amazonaws.com/agents/platformoncall:0.1.1" in 36.645s (36.645s including waiting). Image size: 621072206 bytes.
+  Normal   Created    3m47s (x4 over 5m14s)  kubelet            spec.containers{kagent}: Container created
+  Normal   Started    3m47s (x4 over 5m14s)  kubelet            spec.containers{kagent}: Container started
+  Normal   Pulled     3m47s (x3 over 4m57s)  kubelet            spec.containers{kagent}: Container image "111122223333.dkr.ecr.us-east-2.amazonaws.com/agents/platformoncall:0.1.1" already present on machine and can be accessed by the pod
+  Warning  Unhealthy  2m25s (x6 over 4m59s)  kubelet            spec.containers{kagent}: Readiness probe failed: Get "http://192.168.244.56:8080/.well-known/agent-card.json": dial tcp 192.168.244.56:8080: connect: connection refused
+  Warning  BackOff    49s (x6 over 4m41s)    kubelet            spec.containers{kagent}: Back-off restarting failed container kagent in pod platformoncall-latest-platformoncall-85c57cc5cd-l7zlw_kagent(02207f48-8504-4c9e-8482-802971967a55)
+Defaulted container "kagent" out of: kagent, opentelemetry-auto-instrumentation-java (init), opentelemetry-auto-instrumentation-nodejs (init), opentelemetry-auto-instrumentation-python (init), opentelemetry-auto-instrumentation-dotnet (init)
+2026-10-04 23:03:31,423 - amazon.opentelemetry.distro.serviceevents.serviceevents_instrumentation - INFO - Wired OTel histogram into monitor state for direct recording
+2026-10-04 23:03:31,423 - amazon.opentelemetry.distro.serviceevents.serviceevents_instrumentation - INFO - Installing ServiceEvents AST transformation hooks
+2026-10-04 23:03:31,423 - amazon.opentelemetry.distro.serviceevents.serviceevents_instrumentation - INFO - AST hooks installed. Packages include: [], Packages exclude: []
+2026-10-04 23:03:31,423 - amazon.opentelemetry.distro.serviceevents.collectors.base_collector - INFO - Starting DeploymentEventCollector (interval: 86400000ms)
+2026-10-04 23:03:31,423 - amazon.opentelemetry.distro.serviceevents.collectors.deployment_event_collector - INFO - Exported DeploymentEvent (trigger=startup)
+2026-10-04 23:03:31,424 - amazon.opentelemetry.distro.serviceevents.serviceevents_instrumentation - INFO - Started DeploymentEventCollector (interval: 86400000ms)
+2026-10-04 23:03:31,424 - amazon.opentelemetry.distro.serviceevents.collectors.base_collector - INFO - Starting EndpointMetricCollector (interval: 30000ms)
+2026-10-04 23:03:31,424 - amazon.opentelemetry.distro.serviceevents.serviceevents_instrumentation - INFO - Started EndpointMetricCollector (interval: 30000ms)
+2026-10-04 23:03:31,424 - amazon.opentelemetry.distro.serviceevents.collectors.base_collector - INFO - Starting IncidentSnapshotCollector (interval: 60000ms)
+2026-10-04 23:03:31,424 - amazon.opentelemetry.distro.serviceevents.serviceevents_instrumentation - INFO - Started IncidentSnapshotCollector (interval: 60000ms)
+2026-10-04 23:03:31,429 - amazon.opentelemetry.distro.serviceevents.serviceevents_instrumentation - INFO - ServiceEvents endpoint span processor installed (framework-agnostic mode)
+2026-10-04 23:03:31,429 - amazon.opentelemetry.distro.serviceevents.serviceevents_instrumentation - INFO - ServiceEvents instrumentation initialized successfully (service=platformoncall-latest-platformoncall)
+Traceback (most recent call last):
+  File "/.kagent/.venv/bin/kagent-adk", line 4, in <module>
+    from kagent.adk.cli import run_cli
+  File "/.kagent/packages/kagent-adk/src/kagent/adk/__init__.py", line 3, in <module>
+    from ._a2a import KAgentApp
+  File "/.kagent/packages/kagent-adk/src/kagent/adk/_a2a.py", line 24, in <module>
+    from kagent.core.a2a import (
+    ...<3 lines>...
+    )
+  File "/.kagent/packages/kagent-core/src/kagent/core/__init__.py", line 3, in <module>
+    from .tracing import configure as configure_tracing
+  File "/.kagent/packages/kagent-core/src/kagent/core/tracing/__init__.py", line 1, in <module>
+    from ._utils import configure
+  File "/.kagent/packages/kagent-core/src/kagent/core/tracing/_utils.py", line 6, in <module>
+    from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
+  File "/.kagent/.venv/lib/python3.13/site-packages/opentelemetry/exporter/otlp/proto/grpc/_log_exporter/__init__.py", line 20, in <module>
+    from opentelemetry.exporter.otlp.proto.grpc.exporter import (
+    ...<3 lines>...
+    )
+  File "/.kagent/.venv/lib/python3.13/site-packages/opentelemetry/exporter/otlp/proto/grpc/exporter.py", line 83, in <module>
+    from opentelemetry.sdk._logs import LogData
+ImportError: cannot import name 'LogData' from 'opentelemetry.sdk._logs' (/otel-auto-instrumentation-python/opentelemetry/sdk/_logs/__init__.py)
+2026-10-04 23:03:35,584 - amazon.opentelemetry.distro.serviceevents.serviceevents_instrumentation - INFO - Shutting down ServiceEvents instrumentation
+2026-10-04 23:03:35,585 - amazon.opentelemetry.distro.serviceevents.collectors.base_collector - INFO - Stopping DeploymentEventCollector
+2026-10-04 23:03:35,585 - amazon.opentelemetry.distro.serviceevents.collectors.deployment_event_collector - INFO - Exported DeploymentEvent (trigger=shutdown)
+2026-10-04 23:03:35,586 - amazon.opentelemetry.distro.serviceevents.collectors.base_collector - INFO - Stopping EndpointMetricCollector
+2026-10-04 23:03:35,586 - amazon.opentelemetry.distro.serviceevents.collectors.base_collector - INFO - Stopping IncidentSnapshotCollector
+2026-10-04 23:03:35,591 - amazon.opentelemetry.distro.serviceevents.serviceevents_instrumentation - INFO - ServiceEvents instrumentation shut down successfully
+(PYTHONOPTIMIZE not set or pod not running)
+bash-5.3$ 

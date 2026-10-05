@@ -1,0 +1,30 @@
+# Bedrock backend with no stored credentials: the proxy uses its Pod Identity role.
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayBackend
+metadata:
+  name: bedrock
+  namespace: agentgateway-system
+spec:
+  ai:
+    provider:
+      bedrock:
+        model: "${BEDROCK_MODEL}"
+        region: "${AWS_REGION}"
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: bedrock
+  namespace: agentgateway-system
+spec:
+  parentRefs:
+    - name: agentgateway-proxy
+      namespace: agentgateway-system
+  rules:
+    - matches:
+        - path: { type: PathPrefix, value: /v1/chat/completions }
+      backendRefs:
+        - name: bedrock
+          namespace: agentgateway-system
+          group: agentgateway.dev
+          kind: AgentgatewayBackend

@@ -1,0 +1,15 @@
+{
+  "manager": {
+    "applicationSignals": {
+      "autoMonitor": {
+        "monitorAllServices": true,
+        "exclude": {
+          "python": { "namespaces": ["kagent", "agentgateway-system", "agentregistry"] },
+          "java":   { "namespaces": ["kagent", "agentgateway-system", "agentregistry"] },
+          "nodejs": { "namespaces": ["kagent", "agentgateway-system", "agentregistry"] },
+          "dotnet": { "namespaces": ["kagent", "agentgateway-system", "agentregistry"] }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,94 @@
+bash-5.3$ kubectl -n kagent get agent platformoncall-latest-platformoncall   # READY should now be True
+NAME                                   TYPE   RUNTIME   READY   ACCEPTED
+platformoncall-latest-platformoncall   BYO              True    True
+bash-5.3$ 
+bash-5.3$ 
+bash-5.3$ cat <<EOF | kubectl apply -f -
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: a2a-platform-oncall
+  namespace: agentgateway-system
+spec:
+  parentRefs:
+    - name: agentgateway-proxy
+      namespace: agentgateway-system
+  rules:
+    - matches:
+        - path: { type: PathPrefix, value: /a2a/ops/platformoncall }
+      filters:
+        - type: URLRewrite
+          urlRewrite:
+            path:
+              type: ReplacePrefixMatch
+              replacePrefixMatch: /api/a2a/kagent/platformoncall-latest-platformoncall
+      backendRefs:
+        - name: kagent-a2a
+          group: agentgateway.dev
+          kind: AgentgatewayBackend
+EOF
+
+curl -s localhost:8080/a2a/ops/platformoncall/.well-known/agent-card.json | jq '{name, skills: [.skills[].id]}'
+httproute.gateway.networking.k8s.io/a2a-platform-oncall created
+Handling connection for 8080
+{
+  "name": "platformoncall_latest_platformoncall",
+  "skills": []
+}
+bash-5.3$ 
+bash-5.3$ 
+bash-5.3$ curl -s --max-time 300 localhost:8080/a2a/ops/platformoncall/ \
+  -H content-type:application/json -d '{
+  "jsonrpc": "2.0", "id": "inc-1", "method": "message/send",
+  "params": {"message": {"role": "user", "kind": "message", "messageId": "inc-1",
+    "parts": [{"kind": "text", "text": "Alarm: checkout pods in namespace shop on cluster ac-ws-dev-use2 are in CrashLoopBackOff. Find the root cause and propose a fix."}]}}
+}' | jq -r '.result.artifacts[]?.parts[]?.text // .result.status.message.parts[]?.text // .'
+Handling connection for 8080
+litellm.BadRequestError: OpenAIException - 1 validation error detected: Value '' at 'toolConfig.tools.1.member.toolSpec.description' failed to satisfy constraint: Member must have length greater than or equal to 1
+bash-5.3$ P=$(kubectl -n kagent get pods -o name | grep -i platformoncall | head -1)
+kubectl -n kagent logs $P --since=5m | grep -vE 'agent-card.json' | tail -40
+kubectl -n agentgateway-system logs deploy/agentgateway-proxy --since=5m | grep -E 'a2a/ops' | tail -10
+      yield llm_response
+  File "/.kagent/.venv/lib/python3.13/site-packages/google/adk/models/lite_llm.py", line 2022, in generate_content_async
+    response = await self.llm_client.acompletion(**completion_args)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/.kagent/.venv/lib/python3.13/site-packages/google/adk/models/lite_llm.py", line 443, in acompletion
+    return await acompletion(
+           ^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+    )
+    ^
+  File "/.kagent/.venv/lib/python3.13/site-packages/litellm/utils.py", line 1584, in wrapper_async
+    raise e
+  File "/.kagent/.venv/lib/python3.13/site-packages/litellm/utils.py", line 1435, in wrapper_async
+    result = await original_function(*args, **kwargs)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/.kagent/.venv/lib/python3.13/site-packages/litellm/main.py", line 559, in acompletion
+    raise exception_type(
+          ~~~~~~~~~~~~~~^
+        model=model,
+        ^^^^^^^^^^^^
+    ...<3 lines>...
+        extra_kwargs=kwargs,
+        ^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "/.kagent/.venv/lib/python3.13/site-packages/litellm/litellm_core_utils/exception_mapping_utils.py", line 2301, in exception_type
+    raise e
+  File "/.kagent/.venv/lib/python3.13/site-packages/litellm/litellm_core_utils/exception_mapping_utils.py", line 391, in exception_type
+    raise BadRequestError(
+    ...<6 lines>...
+    )
+litellm.exceptions.BadRequestError: litellm.BadRequestError: OpenAIException - 1 validation error detected: Value '' at 'toolConfig.tools.1.member.toolSpec.description' failed to satisfy constraint: Member must have length greater than or equal to 1
+2026-10-04 22:53:53,542 - google_adk.google.adk.runners - INFO - Closing runner...
+2026-10-04 22:53:53,543 - google_adk.google.adk.runners - INFO - Closing toolset: MCPToolset
+2026-10-04 22:53:53,549 - httpx - INFO - HTTP Request: POST http://kagent-controller.kagent:8083/api/tasks "HTTP/1.1 201 Created"
+2026-10-04 22:53:53,556 - mcp.client.streamable_http - INFO - GET stream disconnected, reconnecting in 1000ms...
+2026-10-04 22:53:53,558 - httpx - INFO - HTTP Request: DELETE http://agentregistry.agentregistry.svc.cluster.local:31313/mcp "HTTP/1.1 204 No Content"
+2026-10-04 22:53:53,559 - google_adk.google.adk.runners - INFO - Successfully closed toolset: MCPToolset
+2026-10-04 22:53:53,559 - google_adk.google.adk.runners - INFO - Runner closed.
+INFO:     192.168.144.68:45406 - "POST / HTTP/1.1" 200 OK
+Defaulted container "agentgateway" out of: agentgateway, opentelemetry-auto-instrumentation-java (init), opentelemetry-auto-instrumentation-nodejs (init), opentelemetry-auto-instrumentation-python (init), opentelemetry-auto-instrumentation-dotnet (init)
+2026-10-04T22:53:44.602185Z	info	request gateway=agentgateway-system/agentgateway-proxy listener=http route=agentgateway-system/a2a-platform-oncall endpoint=kagent-controller.kagent.svc.cluster.local:8083 src.addr=127.0.0.1:49746 http.method=GET http.host=localhost http.path=/a2a/ops/platformoncall/.well-known/agent-card.json http.version=HTTP/1.1 http.status=200 protocol=a2a duration=11ms
+2026-10-04T22:53:53.561887Z	info	request gateway=agentgateway-system/agentgateway-proxy listener=http route=agentgateway-system/a2a-platform-oncall endpoint=kagent-controller.kagent.svc.cluster.local:8083 src.addr=127.0.0.1:45324 http.method=POST http.host=localhost http.path=/a2a/ops/platformoncall/ http.version=HTTP/1.1 http.status=200 protocol=a2a a2a.method=message/send a2a.response.outcome=success a2a.result.kind=task a2a.task.state=failed a2a.context.id=cce95482-734b-48dd-bd22-cd48b1b12311 duration=346ms
+bash-5.3$ 

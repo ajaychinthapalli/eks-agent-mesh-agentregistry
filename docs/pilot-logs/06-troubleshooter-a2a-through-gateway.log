@@ -1,0 +1,49 @@
+bash-5.3$ kubectl -n agentgateway-system get httproute a2a-eks-troubleshooter \
+  -o jsonpath='{range .status.parents[*].conditions[*]}{.type}={.status} {end}{"\n"}'
+Accepted=True ResolvedRefs=True
+bash-5.3$ curl -s localhost:8080/a2a/ops/eks-troubleshooter/.well-known/agent-card.json | jq '{name, url}'
+{
+  "name": "eks_troubleshooter",
+  "url": "http://kagent-controller.kagent.svc:8083/api/a2a/kagent/eks-troubleshooter/"
+}
+bash-5.3$ curl -s --max-time 180 localhost:8080/a2a/ops/eks-troubleshooter/ \
+  -H content-type:application/json -d '{ ... "Why are the checkout pods in namespace shop failing?" ... }' \
+  | jq -r '.result.artifacts[]?.parts[]?.text'
+Perfect! I now have all the information I need to diagnose the issue.
+
+---
+
+## Root Cause
+**The container is being OOMKilled because it's trying to allocate 250MB of memory but the memory limit is only 100Mi.**
+
+## Evidence
+
+1. **Pod Status**: Both pods are in `CrashLoopBackOff` with 6+ restarts
+2. **Last State from pod describe**:
+   ```
+   Last State:     Terminated
+     Reason:       OOMKilled
+     Exit Code:    137
+   ```
+3. **Resource Configuration Mismatch**:
+   - Container args: `--vm-bytes 250M` (trying to allocate 250MB)
+   - Memory limit: `100Mi` (only ~104.86MB available)
+   - Memory request: `50Mi`
+
+4. **Events**: The BackOff events confirm repeated container failures after starting
+
+## Proposed Fix
+
+Increase the memory limit to accommodate the requested allocation (limits 300Mi, requests 250Mi),
+or reduce the --vm-bytes argument to 80M if the 250MB allocation is not needed.
+
+# Later in the run the public path was renamed to /a2a/ops/ekstroubleshooter
+# (agentregistry names allow only lowercase letters and digits):
+bash-5.3$ kubectl -n agentgateway-system patch httproute a2a-eks-troubleshooter --type json -p '[
+  {"op":"replace","path":"/spec/rules/0/matches/0/path/value","value":"/a2a/ops/ekstroubleshooter"}
+]'
+httproute.gateway.networking.k8s.io/a2a-eks-troubleshooter patched
+bash-5.3$ curl -s localhost:8080/a2a/ops/ekstroubleshooter/.well-known/agent-card.json | jq '{name}'
+{
+  "name": "eks_troubleshooter"
+}

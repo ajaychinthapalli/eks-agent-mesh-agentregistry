@@ -1,0 +1,18 @@
+# Deploys the On-call Agent from the registry to kagent (Kubernetes runtime).
+# kagent names the resulting Agent platformoncall-latest-platformoncall.
+apiVersion: ar.dev/v1alpha1
+kind: Deployment
+metadata:
+  name: platformoncall
+spec:
+  env:
+    GATEWAY_URL: ${GW}
+    OPENAI_API_KEY: unused
+    MCP_SERVERS_CONFIG: '[{"name":"agentregistry","type":"remote","url":"${REGISTRY_MCP_URL}"}]'
+  runtimeRef:
+    kind: Runtime
+    name: kubernetes-default
+  targetRef:
+    kind: Agent
+    name: platformoncall
+    tag: latest

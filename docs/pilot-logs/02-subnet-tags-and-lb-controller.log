@@ -1,0 +1,73 @@
+bash-5.3$ aws ec2 create-tags --tags Key=kubernetes.io/role/internal-elb,Value=1 \
+  --resources subnet-xxxxxxxxxxxxxxxxx subnet-xxxxxxxxxxxxxxxxx subnet-xxxxxxxxxxxxxxxxx
+bash-5.3$ 
+bash-5.3$ 
+bash-5.3$ curl -o alb-iam-policy.json \
+  https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/main/docs/install/iam_policy.json
+aws iam create-policy --policy-name AWSLoadBalancerControllerIAMPolicy \
+  --policy-document file://alb-iam-policy.json
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+100  8955  100  8955    0     0  53778      0 --:--:-- --:--:-- --:--:-- 53945
+{
+    "Policy": {
+        "PolicyName": "AWSLoadBalancerControllerIAMPolicy",
+        "PolicyId": "ANPAEXAMPLEPOLICYID",
+        "Arn": "arn:aws:iam::111122223333:policy/AWSLoadBalancerControllerIAMPolicy",
+        "Path": "/",
+        "DefaultVersionId": "v1",
+        "AttachmentCount": 0,
+        "PermissionsBoundaryUsageCount": 0,
+        "IsAttachable": true,
+        "CreateDate": "2026-10-04T21:39:26+00:00",
+        "UpdateDate": "2026-10-04T21:39:26+00:00"
+    }
+}
+bash-5.3$ eksctl create podidentityassociation --cluster $CLUSTER --region $AWS_REGION \
+  --namespace kube-system \
+  --service-account-name aws-load-balancer-controller \
+  --role-name AmazonEKSLoadBalancerControllerRole-use2 \
+  --permission-policy-arns arn:aws:iam::$ACCOUNT_ID:policy/AWSLoadBalancerControllerIAMPolicy
+2026-10-04 14:39:38 [ℹ]  1 task: { 
+    2 sequential sub-tasks: { 
+        create IAM role for pod identity association for service account "kube-system/aws-load-balancer-controller",
+        create pod identity association for service account "kube-system/aws-load-balancer-controller",
+    } }2026-10-04 14:39:39 [ℹ]  deploying stack "eksctl-ac-ws-dev-use2-podidentityrole-kube-system-aws-load-balancer-controller"
+2026-10-04 14:39:39 [ℹ]  waiting for CloudFormation stack "eksctl-ac-ws-dev-use2-podidentityrole-kube-system-aws-load-balancer-controller"
+2026-10-04 14:40:09 [ℹ]  waiting for CloudFormation stack "eksctl-ac-ws-dev-use2-podidentityrole-kube-system-aws-load-balancer-controller"
+2026-10-04 14:40:10 [ℹ]  created pod identity association for service account "aws-load-balancer-controller" in namespace "kube-system"
+2026-10-04 14:40:10 [ℹ]  all tasks were completed successfully
+bash-5.3$ 
+bash-5.3$ helm repo add eks https://aws.github.io/eks-charts && helm repo update
+"eks" has been added to your repositories
+Hang tight while we grab the latest from your chart repositories...
+...Successfully got an update from the "headlamp" chart repository
+...Successfully got an update from the "eks" chart repository
+...Successfully got an update from the "skyhook" chart repository
+...Successfully got an update from the "k8sgpt" chart repository
+...Successfully got an update from the "ollama-helm" chart repository
+...Successfully got an update from the "external-secrets" chart repository
+Update Complete. ⎈Happy Helming!⎈
+bash-5.3$ helm install aws-load-balancer-controller eks/aws-load-balancer-controller \
+  -n kube-system \
+  --set clusterName=$CLUSTER \
+  --set serviceAccount.create=true \
+  --set serviceAccount.name=aws-load-balancer-controller \
+  --set region=$AWS_REGION --set vpcId=$VPC_ID
+NAME: aws-load-balancer-controller
+LAST DEPLOYED: Sun Oct  4 14:41:36 2026
+NAMESPACE: kube-system
+STATUS: deployed
+REVISION: 1
+DESCRIPTION: Install complete
+TEST SUITE: None
+NOTES:
+AWS Load Balancer controller installed!
+bash-5.3$ kubectl -n kube-system rollout status deploy/aws-load-balancer-controller
+deployment "aws-load-balancer-controller" successfully rolled out
+bash-5.3$ 
+bash-5.3$ kubectl -n kube-system get pods -l app.kubernetes.io/name=aws-load-balancer-controller -o wide
+NAME                                            READY   STATUS    RESTARTS   AGE   IP                NODE                                            NOMINATED NODE   READINESS GATES
+aws-load-balancer-controller-7c48cfd896-f4lhp   1/1     Running   0          25s   192.168.215.225   ip-192-168-251-66.us-east-2.compute.internal    <none>           <none>
+aws-load-balancer-controller-7c48cfd896-gtjqt   1/1     Running   0          25s   192.168.172.127   ip-192-168-128-165.us-east-2.compute.internal   <none>           <none>
+bash-5.3$ 
