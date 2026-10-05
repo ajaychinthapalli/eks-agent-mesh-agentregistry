@@ -1,0 +1,22 @@
+# kagent sends OpenAI-format requests to agentgateway, which translates them to Bedrock.
+# The API key is a placeholder: the gateway holds the AWS identity.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: gateway-placeholder-key
+  namespace: kagent
+stringData:
+  key: unused
+---
+apiVersion: kagent.dev/v1alpha2
+kind: ModelConfig
+metadata:
+  name: bedrock-via-agentgateway
+  namespace: kagent
+spec:
+  provider: OpenAI
+  model: bedrock-claude
+  apiKeySecret: gateway-placeholder-key
+  apiKeySecretKey: key
+  openAI:
+    baseUrl: ${GW}/v1

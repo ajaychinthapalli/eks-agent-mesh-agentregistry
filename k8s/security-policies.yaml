@@ -1,0 +1,81 @@
+# JWT on the A2A routes only (the Bedrock route stays open to in-cluster kagent calls).
+# Tokens are Kubernetes ServiceAccount tokens, verified against the EKS OIDC issuer's keys.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ops-callers
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: incident-intake
+  namespace: ops-callers
+---
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayBackend
+metadata:
+  name: eks-oidc-jwks
+  namespace: agentgateway-system
+spec:
+  static:
+    host: oidc.eks.${AWS_REGION}.amazonaws.com
+    port: 443
+  policies:
+    tls:
+      sni: oidc.eks.${AWS_REGION}.amazonaws.com
+---
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayPolicy
+metadata:
+  name: a2a-jwt
+  namespace: agentgateway-system
+spec:
+  targetRefs:
+    - { group: gateway.networking.k8s.io, kind: HTTPRoute, name: a2a-eks-troubleshooter }
+    - { group: gateway.networking.k8s.io, kind: HTTPRoute, name: a2a-platform-oncall }
+  traffic:
+    jwtAuthentication:
+      mode: Strict
+      providers:
+        - issuer: "${OIDC_ISSUER}"
+          jwks:
+            remote:
+              jwksPath: "/id/${OIDC_ID}/keys"
+              cacheDuration: "5m"
+              backendRef:
+                group: agentgateway.dev
+                kind: AgentgatewayBackend
+                name: eks-oidc-jwks
+                port: 443
+---
+# Only the On-call Agent may call the Troubleshooter.
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayPolicy
+metadata:
+  name: authz-eks-troubleshooter
+  namespace: agentgateway-system
+spec:
+  targetRefs:
+    - { group: gateway.networking.k8s.io, kind: HTTPRoute, name: a2a-eks-troubleshooter }
+  traffic:
+    authorization:
+      action: Allow
+      policy:
+        matchExpressions:
+          - "jwt.sub == 'system:serviceaccount:kagent:platformoncall-latest-platformoncall'"
+---
+# Only the incident-intake identity may call the On-call Agent.
+apiVersion: agentgateway.dev/v1alpha1
+kind: AgentgatewayPolicy
+metadata:
+  name: authz-platform-oncall
+  namespace: agentgateway-system
+spec:
+  targetRefs:
+    - { group: gateway.networking.k8s.io, kind: HTTPRoute, name: a2a-platform-oncall }
+  traffic:
+    authorization:
+      action: Allow
+      policy:
+        matchExpressions:
+          - "jwt.sub == 'system:serviceaccount:ops-callers:incident-intake'"

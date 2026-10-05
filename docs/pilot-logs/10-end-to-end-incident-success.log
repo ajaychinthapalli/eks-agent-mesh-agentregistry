@@ -1,0 +1,43 @@
+# After rebuilding the On-call Agent as 0.1.1 (explicit call_agent description) and excluding
+# the agent namespaces from CloudWatch Application Signals auto-instrumentation.
+bash-5.3$ kubectl -n kagent get $P -o jsonpath='image={.spec.containers[0].image} init={.spec.initContainers[*].name}{"\n"}'
+image=111122223333.dkr.ecr.us-east-2.amazonaws.com/agents/platformoncall:0.1.1 init=
+call_agent | Send a task to a specialist agent over A2A through agentgateway and return its a
+bash-5.3$ curl -s --max-time 300 localhost:8080/a2a/ops/platformoncall/ ... \
+  "Alarm: checkout pods in namespace shop on cluster ac-ws-dev-use2 are in CrashLoopBackOff. Find the root cause and propose a fix."
+## Incident Resolution Summary
+
+### Agent Used
+**ekstroubleshooter** - EKS Troubleshooting Specialist
+
+### Root Cause
+The checkout pods are being **OOMKilled (Out of Memory Killed)** because there's a memory configuration mismatch:
+- The container is attempting to allocate **250MB** of memory (via the `--vm-bytes 250M` stress test argument)
+- The memory limit is only set to **100Mi**, which is insufficient
+- When the container tries to allocate beyond the limit, Kubernetes kills it with exit code 137
+
+### Evidence
+1. **Pod State**: Both checkout pods show CrashLoopBackOff with 12 restarts
+2. **Termination Reason**: `OOMKilled` with exit code 137 (SIGKILL)
+3. **Configuration Mismatch**:
+   - Requested memory allocation: 250MB
+   - Memory limit: 100Mi
+   - Memory request: 50Mi
+
+### Proposed Fix
+**Option 1 (Recommended)**: Increase the memory limit (limits 300Mi, requests 250Mi)
+**Option 2 (If resources are constrained)**: Reduce the stress test allocation (--vm-bytes 80M)
+
+# Gateway log: every hop, in order
+http.status=200 route=agentgateway-system/bedrock http.status=200
+route=agentgateway-system/bedrock http.status=200 route=agentgateway-system/bedrock
+http.status=200 route=agentgateway-system/bedrock http.status=200
+route=agentgateway-system/a2a-eks-troubleshooter http.status=200 a2a.task.state=completed
+route=agentgateway-system/bedrock http.status=200 route=agentgateway-system/a2a-platform-oncall
+http.status=200 a2a.task.state=completed
+
+# On-call Agent log: registry discovery over MCP, then the model call through the gateway
+2026-10-04 23:08:46,027 - httpx - INFO - HTTP Request: POST http://agentregistry.agentregistry.svc.cluster.local:31313/mcp "HTTP/1.1 200 OK"
+2026-10-04 23:08:52,575 - httpx - INFO - HTTP Request: POST http://agentgateway-proxy.agentgateway-system.svc.cluster.local/v1/chat/completions "HTTP/1.1 200 OK"
+2026-10-04 23:08:52,616 - httpx - INFO - HTTP Request: POST http://kagent-controller.kagent:8083/api/tasks "HTTP/1.1 201 Created"
+2026-10-04 23:08:52,621 - httpx - INFO - HTTP Request: DELETE http://agentregistry.agentregistry.svc.cluster.local:31313/mcp "HTTP/1.1 204 No Content"

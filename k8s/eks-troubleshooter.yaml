@@ -1,0 +1,36 @@
+# Read-only EKS troubleshooting agent. The toolNames allow-list keeps it read-only:
+# kagent-tool-server also exposes write tools (apply, patch, delete, exec), which are not listed here.
+apiVersion: kagent.dev/v1alpha2
+kind: Agent
+metadata:
+  name: eks-troubleshooter
+  namespace: kagent
+spec:
+  description: Diagnoses failing workloads and nodes on Amazon EKS clusters
+  type: Declarative
+  declarative:
+    modelConfig: bedrock-via-agentgateway
+    systemMessage: |
+      You are an EKS troubleshooting specialist. You are read-only: never
+      create, change or delete resources. For the workload you are asked about,
+      gather pod status, events, logs and the owning Deployment's spec.
+      Return: root cause in one sentence, the evidence, and a proposed fix as a
+      YAML diff.
+    tools:
+      - type: McpServer
+        mcpServer:
+          apiGroup: kagent.dev
+          kind: RemoteMCPServer
+          name: kagent-tool-server
+          toolNames:
+            - k8s_get_resources
+            - k8s_describe_resource
+            - k8s_get_events
+            - k8s_get_pod_logs
+            - k8s_get_resource_yaml
+    a2aConfig:
+      skills:
+        - id: diagnose-workload
+          name: Diagnose workload
+          description: Root cause for CrashLoopBackOff, OOMKilled, ImagePullBackOff and Pending pods
+          tags: [eks, troubleshooting, pods]

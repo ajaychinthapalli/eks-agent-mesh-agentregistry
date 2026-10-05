@@ -1,0 +1,13 @@
+# Catalog record for the kagent-run Troubleshooter. agentregistry does not discover agents
+# created with kubectl, and its search matches the title and description text.
+apiVersion: ar.dev/v1alpha1
+kind: Agent
+metadata:
+  name: ekstroubleshooter
+spec:
+  title: EKS Troubleshooter
+  description: >-
+    Read-only Amazon EKS troubleshooting specialist, reachable over A2A at
+    agentgateway path /a2a/ops/ekstroubleshooter. Skill diagnose-workload:
+    root cause for CrashLoopBackOff, OOMKilled, ImagePullBackOff and Pending
+    pods. Tags: eks, kubernetes, troubleshooting, pods, incidents.

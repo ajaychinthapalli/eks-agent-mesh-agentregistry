@@ -1,0 +1,7 @@
+scripts/00-env.sh
+*.env
+.env
+agentregistry-values.yaml
+__pycache__/
+*.pyc
+.DS_Store

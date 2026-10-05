@@ -1,0 +1,15 @@
+{
+  "name": "platformoncall",
+  "description": "Platform on-call agent for Amazon EKS: finds specialists in agentregistry and delegates over A2A",
+  "url": "http://localhost:8080",
+  "version": "0.1.1",
+  "capabilities": { "streaming": true },
+  "defaultInputModes": ["text"],
+  "defaultOutputModes": ["text"],
+  "skills": [{
+    "id": "triage-and-delegate",
+    "name": "Triage and delegate",
+    "description": "Takes an EKS incident, finds the right specialist in agentregistry, and returns its diagnosis",
+    "tags": ["eks", "on-call", "incidents"]
+  }]
+}

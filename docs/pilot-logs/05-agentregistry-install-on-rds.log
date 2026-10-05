@@ -1,0 +1,43 @@
+bash-5.3$ helm upgrade --install agentregistry \
+  oci://ghcr.io/agentregistry-dev/agentregistry/charts/agentregistry \
+  --namespace agentregistry --create-namespace \
+  -f agentregistry-values.yaml
+Release "agentregistry" does not exist. Installing it now.
+Pulled: ghcr.io/agentregistry-dev/agentregistry/charts/agentregistry:0.4.0
+Digest: sha256:777245620038f1d896c7ffdd6b13ab86586c87ae2ab945df33815cd90f308685
+NAME: agentregistry
+LAST DEPLOYED: Sun Oct  4 15:25:31 2026
+NAMESPACE: agentregistry
+STATUS: deployed
+REVISION: 1
+DESCRIPTION: Install complete
+bash-5.3$ kubectl rollout status -n agentregistry deploy/agentregistry --timeout=5m
+deployment "agentregistry" successfully rolled out
+bash-5.3$ kubectl -n agentregistry get pods,svc
+NAME                                 READY   STATUS    RESTARTS   AGE
+pod/agentregistry-75b87f5ff8-4gvs6   1/1     Running   0          26s
+
+NAME                    TYPE        CLUSTER-IP       EXTERNAL-IP   PORT(S)               AGE
+service/agentregistry   ClusterIP   10.100.253.246   <none>        12121/TCP,31313/TCP   26s
+bash-5.3$ kubectl -n agentregistry logs deploy/agentregistry --tail=30
+{"level":"info","msg":"using public authz provider","component":"default"}
+{"level":"info","msg":"v1alpha1 routes enabled","component":"default"}
+{"level":"info","msg":"starting agentregistry","component":"default","version":"v0.4.0","commit":"aef6563"}
+{"level":"info","msg":"UI handler initialized; web interface will be available","component":"default"}
+{"level":"info","msg":"MCP HTTP server starting","component":"default","address":":31313"}
+{"level":"info","msg":"HTTP server starting","component":"default","address":":8080"}
+bash-5.3$ arctl version
+arctl version v0.4.0
+Server version: v0.4.0
+bash-5.3$ arctl get runtimes
+NAME                 TYPE
+kubernetes-default   Kubernetes
+local                Local
+bash-5.3$ # Registry MCP endpoint, from inside the cluster
+bash-5.3$ kubectl run mcptest --rm -i --restart=Never --image=curlimages/curl -- \
+  curl -s -i http://agentregistry.agentregistry.svc.cluster.local:31313/mcp ... initialize
+HTTP/1.1 200 OK
+Content-Type: text/event-stream
+
+event: message
+data: {"jsonrpc":"2.0","id":1,"result":{"capabilities":{"logging":{},"prompts":{"listChanged":true},"tools":{"listChanged":true}},"protocolVersion":"2025-06-18","serverInfo":{"name":"agentregistry-mcp","version":"v0.4.0"}}}

@@ -1,0 +1,9 @@
+apiVersion: ar.dev/v1alpha1
+kind: Agent
+metadata:
+  name: platformoncall
+spec:
+  description: 'Platform on-call agent for Amazon EKS: finds specialists in agentregistry
+    and delegates over A2A'
+  source:
+    image: ${IMAGE}

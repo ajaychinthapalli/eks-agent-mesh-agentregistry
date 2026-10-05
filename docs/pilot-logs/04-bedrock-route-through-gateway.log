@@ -1,0 +1,52 @@
+bash-5.3$ kill %1 2>/dev/null
+kubectl -n agentgateway-system port-forward svc/agentgateway-proxy 8080:80 &
+sleep 3
+curl -s localhost:8080/v1/chat/completions -H content-type:application/json \
+  -d '{"model":"","messages":[{"role":"user","content":"Reply with the word ready."}]}' | jq
+[2] 29051
+Forwarding from 127.0.0.1:8080 -> 80
+Forwarding from [::1]:8080 -> 80
+[1]-  Terminated: 15             kubectl -n agentgateway-system port-forward svc/agentgateway-proxy 8080:80
+Handling connection for 8080
+{
+  "model": "us.anthropic.claude-sonnet-4-5-20250929-v1:0",
+  "usage": {
+    "prompt_tokens": 13,
+    "completion_tokens": 4,
+    "total_tokens": 17,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "cache_write_tokens": 0
+    },
+    "cache_read_input_tokens": 0,
+    "cache_creation_input_tokens": 0
+  },
+  "choices": [
+    {
+      "message": {
+        "content": "ready",
+        "role": "assistant"
+      },
+      "index": 0,
+      "finish_reason": "stop"
+    }
+  ],
+  "id": "bedrock-1791151990873",
+  "created": 1791151990,
+  "object": "chat.completion"
+}
+bash-5.3$ export GW=http://agentgateway-proxy.agentgateway-system.svc.cluster.local
+bash-5.3$ kubectl run gwtest --rm -i --restart=Never --image=curlimages/curl -- \
+  curl -s $GW/v1/chat/completions -H content-type:application/json \
+  -d '{"model":"","messages":[{"role":"user","content":"Reply with the word ok."}]}'
+{"model":"us.anthropic.claude-sonnet-4-5-20250929-v1:0","usage":{"prompt_tokens":13,"completion_tokens":4,"total_tokens":17,"prompt_tokens_details":{"cached_tokens":0,"cache_write_tokens":0},"cache_read_input_tokens":0,"cache_creation_input_tokens":0},"choices":[{"message":{"content":"ok","role":"assistant"},"index":0,"finish_reason":"stop"}],"id":"bedrock-1791152082869","created":1791152082,"object":"chat.completion"}pod "gwtest" deleted from default namespace
+bash-5.3$ kubectl -n kagent get modelconfig bedrock-via-agentgateway -o jsonpath='{.status.conditions}' | jq
+[
+  {
+    "lastTransitionTime": "2026-10-04T22:15:37Z",
+    "message": "Model configuration accepted",
+    "reason": "ModelConfigReconciled",
+    "status": "True",
+    "type": "Accepted"
+  }
+]
